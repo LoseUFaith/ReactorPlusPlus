@@ -11,7 +11,7 @@ local filesystem = require("filesystem")
 local serialization = require("serialization")
 local shell = require("shell")
 local term = require("term")
-local tty = require("tty")
+-- Don't use tty API. It is obsolete. You should use gpu Component API
 
 local function getCom(t) -- Get component
     if component.list(t) then
@@ -297,7 +297,7 @@ local transfer = getCom("transposer")
 local function paddingMid(s, t) -- print text with padding middle
     local tt = t
     if not tt then tt = " " end
-    local w, h = tty.gpu().getViewport()
+    local w, h = gpu.getViewport()
     local nLeft = math.floor((w - string.len(s)) / 2)
     return string.rep(tt, nLeft) .. s ..
                string.rep(tt, w - nLeft - string.len(s))
@@ -306,7 +306,7 @@ end
 local function paddingLeft(s, t)
     local tt = t
     if not tt then tt = " " end
-    local w, h = tty.gpu().getViewport()
+    local w, h = gpu.getViewport()
     return s .. string.rep(tt, w - string.len(s))
 end
 
@@ -387,12 +387,12 @@ local function keyDown(t) -- get key. it t defined, the function will wait the k
 end
 
 ---------------script starts---------------------
-local w1, h1 = tty.gpu().getViewport() -- origin size
+local w1, h1 = gpu.getViewport() -- origin size
 local items -- gt5 or ic2 items table
 if rs and reactor and transfer then -- if components defined
     local cfg = getConfig()
     -- work start
-    local w, h = tty.gpu().getViewport()
+    local w, h = gpu.getViewport()
     local command = "s"
     while true do
         if cfg.mod == 1 then
