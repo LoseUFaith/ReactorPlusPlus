@@ -14,7 +14,6 @@ local component = require("component")
 local event = require("event")
 local filesystem = require("filesystem")
 local serialization = require("serialization")
-local shell = require("shell")
 local term = require("term")
 -- Don't use tty API. It is obsolete. You should use gpu Component API
 
@@ -51,6 +50,8 @@ local function getTable(f) -- get table from file
 end
 
 local gpu = getCom("gpu")
+
+gpu.setDepth(gpu.maxDepth())
 
 -- DO NOT USE CLEAR! USE FG AND BG  BG IS BACKGROUND.
 local RED, YELLOW, GREEN, BLUE, PURPLE, CYAN, WHITE, BG, FG, BLACK, CLEAR
@@ -229,7 +230,7 @@ local transfer = getCom("transposer")
 local function paddingMid(s, t) -- print text with padding middle
     local tt = t
     if not tt then tt = " " end
-    local w, h = gpu.getViewport()
+    local w, h = gpu.getResolution()
     local nLeft = math.floor((w - string.len(s)) / 2)
     return string.rep(tt, nLeft) .. s ..
                string.rep(tt, w - nLeft - string.len(s))
@@ -238,7 +239,7 @@ end
 local function paddingLeft(s, t)
     local tt = t
     if not tt then tt = " " end
-    local w, h = gpu.getViewport()
+    local w, h = gpu.getResolution()
     return s .. string.rep(tt, w - string.len(s))
 end
 
@@ -253,7 +254,7 @@ end
 local function getConfig()
     -- Config sides. If there are config file and using the config, read the config and prompt, otherwise reconfigure.
     local cfg = getTable("/home/reactor.cfg")
-    shell.execute("resolution 50 16")
+    gpu.setResolution(50,16)
     term.clear()
     if cfg then
         colorPrint(BLUE, "Current configuration:")
@@ -299,7 +300,7 @@ local function getConfig()
 
     ---@diagnostic disable-next-line: undefined-field
     os.sleep(1);
-    shell.execute("resolution 32 6")
+    gpu.setResolution(32,6)
     term.clear()
 
     return cfg
@@ -317,11 +318,11 @@ local function keyDown(t) -- get key. it t defined, the function will wait the k
 end
 
 ---------------script starts---------------------
-local w1, h1 = gpu.getViewport() -- origin size
+local w1, h1 = gpu.getResolution() -- origin size
 if rs and reactor and transfer then -- if components defined
     local cfg = getConfig()
     -- work start
-    local w, h = gpu.getViewport()
+    local w, h = gpu.getResolution()
     local command = "s"
     local overheated = false
     while true do
@@ -443,7 +444,7 @@ if rs and reactor and transfer then -- if components defined
             cfg = getConfig()
         end
     end
-    shell.execute("resolution " .. w1 .. " " .. h1) -- restore to origin size
+    gpu.setResolution(w1, h1) -- restore to origin size
 else
     colorPrint(RED, "Please check components: REDSTONE, TRANSPOSER, REACTOR")
 end
