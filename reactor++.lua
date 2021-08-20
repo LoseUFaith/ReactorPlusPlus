@@ -174,7 +174,7 @@ format:
 }
 
 XX: string, a item id. The script will check this item.
-AA: XX's meta value. Default to 0.
+AA: XX's meta value. Default to any.
 YY: float, means the item's damage value ratio. If the item's damage value lower than this value, when item is nil, the reactor will stop, otherwise it will replace it with ZZ.
 ZZ: string, a item id. The item will replaced with.
 BB: ZZ's meta value. Default to any.
