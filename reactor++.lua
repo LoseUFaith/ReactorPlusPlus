@@ -3,9 +3,14 @@
 reactor++.lua By Creepercdn
 Since 2021/8/18 UTC+8:00
 A automatic reactor script for IC2 and OC.
+ONLY TESTED ON 1.12.2
+ONLY FOR 1.12.2
 
 A version from reactor2.lua(By odixus, https://www.mcmod.cn/post/693.html)
---]] local component = require("component")
+
+Some themes can found on https://xcolors.herokuapp.com/
+--]]
+local component = require("component")
 local event = require("event")
 local filesystem = require("filesystem")
 local serialization = require("serialization")
@@ -47,7 +52,7 @@ end
 
 local gpu = getCom("gpu")
 
--- DO NOT USE CLEAR! USE FG AND BG  WHILE AND BG ARE BACKGROUND.
+-- DO NOT USE CLEAR! USE FG AND BG  BG IS BACKGROUND.
 local RED, YELLOW, GREEN, BLUE, PURPLE, CYAN, WHITE, BG, FG, BLACK, CLEAR
 
 --[[ local RED, YELLOW, GREEN, BLUE, CLEAR = "\27[31m", "\27[33m", "\27[32m",
@@ -60,16 +65,31 @@ local function initColor(type)
     -- Use terminal.sexy! It is awesome!
     -- https://terminal.sexy/
     -- BG FG BLACK RED GREEN YELLOW BLUE PURPLE CYAN WHITE
-    if type==0 then
-        palette = {0x000000,0xFFFFFF,0x000000,0xFF0000,0x00FF00,0xFFFF00,0x0000FF,0xFF00FF,0x00FFFF,0xFFFFFF}
-    elseif type==1 then
-        palette = {0x21252B,0xABB2BF,0x21252B,0xE06C75,0x98C379,0xE5C07B,0x61AFEF,0xC678DD,0x56B6C2,0xABB2BF}
-    elseif type==2 then
-        palette = {0x272822,0xf8f8f2,0x272822,0xf92672,0xa6e22e,0xf4bf75,0x66d9ef,0xae81ff,0xa1efe4,0xf8f8f2}
-    elseif type==3 then
-        palette = {0x171717,0xf8f8f8,0x171717,0xd81765,0x97d01a,0xffa800,0x16b1fb,0xff2491,0x0fdcb6,0xebebeb}
-    elseif type==4 then
-        palette = {0x000000,0xffffff,0x151515,0xed4c7a,0xa6e179,0xffdf6b,0x79d2ff,0xe85b92,0x87a8af,0xe2f1f6}
+    if type == 0 then
+        palette = {
+            0x000000, 0xFFFFFF, 0x000000, 0xFF0000, 0x00FF00, 0xFFFF00,
+            0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFFFF
+        }
+    elseif type == 1 then
+        palette = {
+            0x21252B, 0xABB2BF, 0x21252B, 0xE06C75, 0x98C379, 0xE5C07B,
+            0x61AFEF, 0xC678DD, 0x56B6C2, 0xABB2BF
+        }
+    elseif type == 2 then
+        palette = {
+            0x272822, 0xf8f8f2, 0x272822, 0xf92672, 0xa6e22e, 0xf4bf75,
+            0x66d9ef, 0xae81ff, 0xa1efe4, 0xf8f8f2
+        }
+    elseif type == 3 then
+        palette = {
+            0x171717, 0xf8f8f8, 0x171717, 0xd81765, 0x97d01a, 0xffa800,
+            0x16b1fb, 0xff2491, 0x0fdcb6, 0xebebeb
+        }
+    elseif type == 4 then
+        palette = {
+            0x000000, 0xffffff, 0x151515, 0xed4c7a, 0xa6e179, 0xffdf6b,
+            0x79d2ff, 0xe85b92, 0x87a8af, 0xe2f1f6
+        }
     end
     gpu.setBackground(palette[1])
     gpu.setForeground(palette[2])
@@ -98,7 +118,7 @@ local function initColor(type)
         return ""
     end
     WHITE = function()
-        gpu.setBackground(palette[10])
+        gpu.setForeground(palette[10])
         return ""
     end
     BG = function()
@@ -109,7 +129,7 @@ local function initColor(type)
         gpu.setForeground(palette[2])
         return ""
     end
-    BLACK = function ()
+    BLACK = function()
         gpu.setForeground(palette[3])
         return ""
     end
@@ -126,7 +146,7 @@ initColor(getTable("/home/reactor.cfg")["theme"] or 0)
 -- > = 255 or 0
 -- 255
 -- > = {} or 0
--- table: 0x0064c2c0
+-- table: 0xFFFFFFFF
 -- > = "i love python" or 0
 -- i love python
 -- >
@@ -134,13 +154,13 @@ initColor(getTable("/home/reactor.cfg")["theme"] or 0)
 -- Q: But, why there are no Ternary Operator?
 -- A: I think you should ask Roberto Ierusalimschy, Waldemar Celes and Luiz Henrique de Figueiredo. They are authors of Lua.
 
-local function colorPrint(color, text)
+local function colorPrint(color, text) -- colorful print()
     color()
     print(text)
     FG()
 end
 
-local function colorWrite(color, text)
+local function colorWrite(color, text) -- colorful term.write
     color()
     term.write(text)
     FG()
@@ -150,149 +170,61 @@ end
 A list for auto detect (and replace) reactor items.
 format:
 {
-[XX]={damage=YY,item=ZZ}
+[XX]={{damage=YY,item=ZZ,metafrom=AA,metato=BB}}
 }
 
 XX: string, a item id. The script will check this item.
-YY: int, means the item's damage value. If the item's damage value lower than this value, when item is nil, the reactor will stop, otherwise it will replace it with ZZ.
+AA: XX's meta value. Default to 0.
+YY: float, means the item's damage value ratio. If the item's damage value lower than this value, when item is nil, the reactor will stop, otherwise it will replace it with ZZ.
 ZZ: string, a item id. The item will replaced with.
+BB: ZZ's meta value. Default to any.
+
+if there are same XX, add multi capture group.
 --]]
 
-local items_IC2 = {
-    ["IC2:reactorUraniumQuaddepleted"] = {item = "IC2:reactorUraniumQuad"},
-    ["IC2:reactorMOXQuaddepleted"] = {item = "IC2:reactorMOXQuad"},
-    ["IC2:reactorUraniumDualdepleted"] = {item = "IC2:reactorUraniumDual"},
-    ["IC2:reactorMOXDualdepleted"] = {item = "IC2:reactorMOXDual"},
-    ["IC2:reactorUraniumSimpledepleted"] = {item = "IC2:reactorUraniumSimple"},
-    ["IC2:reactorMOXSimpledepleted"] = {item = "IC2:reactorMOXSimple"},
-    ["IC2:reactorReflector"] = {damage = 0.01, item = "IC2:reactorReflector"},
-    ["IC2:reactorReflectorThick"] = {
+local items = {
+    ["ic2:nuclear"] = {
+        {item = "ic2:reactorUraniumQuad", metafrom = 13},
+        {item = "ic2:reactorMOXQuad", metafrom = 16},
+        {item = "ic2:reactorUraniumDual", metafrom = 12},
+        {item = "ic2:reactorMOXDual", metafrom = 15},
+        {item = "ic2:reactorUraniumSimple", metafrom = 11},
+        {item = "ic2:reactorMOXSimple", metafrom = 14}
+    },
+    ["ic2:reactorReflector"] = {{damage = 0.01, item = "ic2:reactorReflector"}},
+    ["ic2:reactorReflectorThick"] = {{
         damage = 0.01,
-        item = "IC2:reactorReflectorThick"
-    },
-    ["IC2:reactorCondensator"] = {
-        damage = 0.01,
-        item = "IC2:reactorCondensator"
-    },
-    ["IC2:reactorCondensatorLap"] = {
-        damage = 0.01,
-        item = "IC2:reactorCondensatorLap"
-    },
-    ["IC2:reactorCoolantSix"] = {damage = 0.05, item = "IC2:reactorCoolantSix"},
-    ["IC2:reactorCoolantTriple"] = {
-        damage = 0.1,
-        item = "IC2:reactorCoolantTriple"
-    },
-    ["IC2:reactorCoolantSimple"] = {
-        damage = 0.2,
-        item = "IC2:reactorCoolantSimple"
-    },
-    ["IC2:reactorVent"] = {damage = 0.8},
-    ["IC2:reactorVentCore"] = {damage = 0.8},
-    ["IC2:reactorVentGold"] = {damage = 0.8},
-    ["IC2:reactorVentDiamond"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitch"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitchCore"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitchSpread"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitchDiamond"] = {damage = 0.8},
-    ["fm:depleted_coaxium_rod"] = {item="fm:coaxium_rod"},
-    ["fm:depleted_coaxium_rod_dual"] = {item="fm:coaxium_rod_dual"},
-    ["fm:depleted_coaxium_rod_quad"] = {item="fm:coaxium_rod_quad"},
-    ["fm:depleted_cesium_rod"] = {item="fm:cesium_rod"},
-    ["fm:depleted_cesium_rod_dual"] = {item="fm:cesium_rod_dual"},
-    ["fm:depleted_cesium_rod_quad"] = {item="fm:cesium_rod_quad"}
+        item = "ic2:reactorReflectorThick"
+    }},
+    ["ic2:lzh_condensator"] = {{damage = 0.01, item = "ic2:lzh_condensator"}},
+    ["ic2:rsh_condensator"] = {{damage = 0.01, item = "ic2:rsh_condensator"}},
+    ["ic2:hex_heat_storage"] = {{damage = 0.05, item = "ic2:hex_heat_storage"}},
+    ["ic2:tri_heat_storage"] = {{damage = 0.1, item = "ic2:tri_heat_storage"}},
+    ["ic2:heat_storage"] = {{damage = 0.2, item = "ic2:heat_storage"}},
+    ["ic2:heat_vent"] = {{damage = 0.8}},
+    ["ic2:reactor_heat_vent"] = {{damage = 0.8}},
+    ["ic2:overclocked_heat_vent"] = {{damage = 0.8}},
+    ["ic2:advanced_heat_vemt"] = {{damage = 0.8}},
+    ["ic2:heat_exchanger"] = {{damage = 0.8}},
+    ["ic2:reactor_heat_exchanger"] = {{damage = 0.8}},
+    ["ic2:component_heat_exchanger"] = {{damage = 0.8}},
+    ["ic2:advanced_heat_exchanger"] = {{damage = 0.8}},
+    ["fm:depleted_coaxium_rod"] = {{item = "fm:coaxium_rod"}},
+    ["fm:depleted_coaxium_rod_dual"] = {{item = "fm:coaxium_rod_dual"}},
+    ["fm:depleted_coaxium_rod_quad"] = {{item = "fm:coaxium_rod_quad"}},
+    ["fm:depleted_cesium_rod"] = {{item = "fm:cesium_rod"}},
+    ["fm:depleted_cesium_rod_dual"] = {{item = "fm:cesium_rod_dual"}},
+    ["fm:depleted_cesium_rod_quad"] = {{item = "fm:cesium_rod_quad"}}
 }
 
 -- Q: When will GregTech update to 1.16?
 -- A: When Worlds Collide.
 -- When worlds collide, you can run, but no can hide!
-local items_gt5 = {
-    ["IC2:reactorReflector"] = {damage = 0.01, item = "IC2:reactorReflector"},
-    ["IC2:reactorReflectorThick"] = {
-        damage = 0.01,
-        item = "IC2:reactorReflectorThick"
-    },
-    ["IC2:reactorCondensator"] = {
-        damage = 0.01,
-        item = "IC2:reactorCondensator"
-    },
-    ["IC2:reactorCondensatorLap"] = {
-        damage = 0.01,
-        item = "IC2:reactorCondensatorLap"
-    },
-    ["IC2:reactorCoolantSix"] = {damage = 0.05, item = "IC2:reactorCoolantSix"},
-    ["IC2:reactorCoolantTriple"] = {
-        damage = 0.1,
-        item = "IC2:reactorCoolantTriple"
-    },
-    ["IC2:reactorCoolantSimple"] = {
-        damage = 0.2,
-        item = "IC2:reactorCoolantSimple"
-    },
-    ["IC2:reactorVent"] = {damage = 0.8},
-    ["IC2:reactorVentCore"] = {damage = 0.8},
-    ["IC2:reactorVentGold"] = {damage = 0.8},
-    ["IC2:reactorVentDiamond"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitch"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitchCore"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitchSpread"] = {damage = 0.8},
-    ["IC2:reactorHeatSwitchDiamond"] = {damage = 0.8},
-    ["gregtech:gt.60k_Helium_Coolantcell"] = {
-        damage = 0.2,
-        item = "gregtech:gt.60k_Helium_Coolantcell"
-    },
-    ["gregtech:gt.180k_Helium_Coolantcell"] = {
-        damage = 0.1,
-        item = "gregtech:gt.180k_Helium_Coolantcell"
-    },
-    ["gregtech:gt.360k_Helium_Coolantcell"] = {
-        damage = 0.05,
-        item = "gregtech:gt.360k_Helium_Coolantcell"
-    },
-    ["gregtech:gt.60k_NaK_Coolantcell"] = {
-        damage = 0.2,
-        item = "gregtech:gt.60k_NaK_Coolantcell"
-    },
-    ["gregtech:gt.180k_NaK_Coolantcell"] = {
-        damage = 0.1,
-        item = "gregtech:gt.180k_NaK_Coolantcell"
-    },
-    ["gregtech:gt.360k_NaK_Coolantcell"] = {
-        damage = 0.05,
-        item = "gregtech:gt.360k_NaK_Coolantcell"
-    },
-    ["IC2:reactorUraniumQuaddepleted"] = {
-        item = "gregtech:gt.reactorUraniumQuad"
-    },
-    ["IC2:reactorUraniumDualdepleted"] = {
-        item = "gregtech:gt.reactorUraniumDual"
-    },
-    ["IC2:reactorUraniumSimpledepleted"] = {
-        item = "gregtech:gt.reactorUraniumSimple"
-    },
-    ["IC2:reactorMOXQuaddepleted"] = {item = "gregtech:gt.reactorMOXQuad"},
-    ["IC2:reactorMOXDualdepleted"] = {item = "gregtech:gt.reactorMOXDual"},
-    ["IC2:reactorMOXSimpledepleted"] = {item = "gregtech:gt.reactorMOXSimple"},
-    ["gregtech:gt.Quad_NaquadahcellDep"] = {
-        item = "gregtech:gt.Quad_Naquadahcell"
-    },
-    ["gregtech:gt.Double_NaquadahcellDep"] = {
-        item = "gregtech:gt.Double_Naquadahcell"
-    },
-    ["gregtech:gt.NaquadahcellDep"] = {item = "gregtech:gt.Naquadahcell"},
-    ["gregtech:gt.Quad_ThoriumcellDep"] = {
-        item = "gregtech:gt.Quad_Thoriumcell"
-    },
-    ["gregtech:gt.Double_ThoriumcellDep"] = {
-        item = "gregtech:gt.Double_Thoriumcell"
-    },
-    ["gregtech:gt.ThoriumcellDep"] = {item = "gregtech:gt.Thoriumcell"}
-}
+-- In memory of Stephen Hillenburg.
 
 local rs = getCom("redstone")
 local reactor = getCom("reactor_chamber")
 local transfer = getCom("transposer")
-
 
 local function paddingMid(s, t) -- print text with padding middle
     local tt = t
@@ -355,11 +287,9 @@ local function getConfig()
         -- overheat ratio
         colorWrite(GREEN, "what is overheat temperature ratio?(0.0001~1) ")
         cfg["overheat"] = getKey()
-        -- mod version
-        colorWrite(GREEN, "Which MOD are you using?(1=ic2,2=gt5)")
-        cfg["mod"] = getKey()
         -- theme
-        colorWrite(GREEN, "What theme do you want to use? 0: 3bit color; 1: one dark; 2: monokai; 3: neno; 4: Coloful Colors")
+        colorWrite(GREEN,
+                   "What theme do you want to use? 0: 3bit color; 1: one dark; 2: monokai; 3: neno; 4: Coloful Colors")
         cfg["theme"] = getKey()
 
         putTable(cfg, "/home/reactor.cfg")
@@ -388,26 +318,16 @@ end
 
 ---------------script starts---------------------
 local w1, h1 = gpu.getViewport() -- origin size
-local items -- gt5 or ic2 items table
 if rs and reactor and transfer then -- if components defined
     local cfg = getConfig()
     -- work start
     local w, h = gpu.getViewport()
     local command = "s"
+    local overheated = false
     while true do
-        if cfg.mod == 1 then
-            items = items_IC2
-        elseif cfg.mod == 2 then
-            items = items_gt5
-        else
-            colorPrint(RED, "Wrong MOD type! Exiting!");
-            rs.setOutput(cfg["redstone"], 0);
-            break
-        end
         local heat = reactor.getHeat()
         local heatMax = reactor.getMaxHeat()
         local running = reactor.producesEnergy()
-        local overheated = false
 
         -- fucking lua, too.
         term.setCursor(1, 1)
@@ -432,69 +352,80 @@ if rs and reactor and transfer then -- if components defined
 
         if heat / heatMax > cfg["overheat"] then -- stop if overheat
             if running then rs.setOutput(cfg["redstone"], 0) end
+            running = false
             overheated = true
         else
             overheated = false
             -- check the items need to replace or stop
+            -- it is fucking to rebuild shit code
 
-            local item_in_reactor = transfer.getAllStacks(cfg["reactor"])
-                                        .getAll()
+            local item_in_reactor = transfer.getAllStacks(cfg["reactor"]).getAll()
             local ready = true
-            for i = 0, #item_in_reactor - 4 do
-                if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table
-                    -- check if low damage (no damage or damage lower than the damage in items table).
-                    local lowDamage = ((not items[item_in_reactor[i].name]
-                                          .damage) or
-                                          ((item_in_reactor[i].maxDamage -
-                                              item_in_reactor[i].damage) <=
-                                              (items[item_in_reactor[i].name]
-                                                  .damage *
-                                                  item_in_reactor[i].maxDamage)))
-                    ready = (ready and (not lowDamage)) -- don't start if there are low damage item
-                    if lowDamage then
-                        if running then
-                            -- stop reactor before replace item
-                            rs.setOutput(cfg["redstone"], 0)
-                            running = false
-                        end
-                        if items[item_in_reactor[i].name].item then -- can replace
-                            transfer.transferItem(cfg["reactor"],
-                                                  cfg["wastebox"], 1, i + 1)
-                            -- find item can be replaced with
-                            local boxLocation = 0
-                            while boxLocation == 0 do
-                                local item_in_box =
-                                    transfer.getAllStacks(cfg["fuelbox"])
-                                        .getAll()
-                                local k = 0
-                                while (boxLocation == 0) and (k <= #item_in_box) do
-                                    if item_in_box[k] and
-                                        (item_in_box[k].name ==
-                                            items[item_in_reactor[i].name].item) then
-                                        boxLocation = k + 1
-                                        break
-                                    end
-                                    k = k + 1
+            for i = 0, #item_in_reactor - 4 do -- "-4" is for liquid reactor
+                if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table (only id)
+                    for captureGroup in items[item_in_reactor[i].name] do -- emurate the capture groups
+                        local lowDamage=true -- if doesn't specify meta and no damage value, just replace it (e.g. depleted rods)
+                        -- if maxDamage isn't zero, there are no metadata.
+                        -- if ((it have damage) or (doesn't specify meta value) or ((there are meta value) and (meta value equals)))
+                        if (item_in_reactor[i].maxDamage ~= 0) or (not captureGroup.metafrom) or (captureGroup.metafrom and (captureGroup.metafrom == item_in_reactor[i].damage)) then
+                            if (not item_in_reactor[i].maxDamage == 0) then -- if it have damage
+                                lowDamage = (
+                                    (not captureGroup.damage) -- if doesn't specify damage, just replace it! (the item is need to replace)
+                                    or (
+                                        (item_in_reactor[i].maxDamage - item_in_reactor[i].damage)
+                                        <= (captureGroup.damage * item_in_reactor[i].maxDamage)
+                                    )
+                                )
+                            end
+                            if lowDamage then
+                                ready = false
+                                if running then
+                                    -- stop reactor before replace item
+                                    rs.setOutput(cfg["redstone"], 0)
+                                    running = false
                                 end
-                                -- replace if can replace, otherwise wait
-                                if (boxLocation > 0) and
-                                    transfer.transferItem(cfg["fuelbox"],
-                                                          cfg["reactor"], 1,
-                                                          boxLocation, i + 1) then
-                                    break
-                                else
-                                    term.setCursor(1, 4)
-                                    colorWrite(RED, paddingMid("Fuel shortage!"))
-                                    ---@diagnostic disable-next-line: undefined-field
-                                    os.sleep(1)
+                                if captureGroup.item then -- can replace
+                                    transfer.transferItem(cfg["reactor"], cfg["wastebox"], 1, i + 1) -- don't understand, daren't modify
+                                    -- find item can be replaced with
+                                    local boxLocation = 0
+                                    while boxLocation == 0 do
+                                        local item_in_box = transfer.getAllStacks(cfg["fuelbox"]).getAll()
+
+                                        -- however, for is best.
+                                        --[[ while (boxLocation == 0) and (k <= #item_in_box) do -- if you don't understand why use while, please see reference of boxLocation.
+                                            if item_in_box[k] and (item_in_box[k].name == captureGroup.item) then
+                                                boxLocation = k + 1
+                                                break
+                                            end
+                                            k = k + 1
+                                        end ]]
+
+                                        for idx=1, #item_in_box, 1 do
+                                            if((item_in_box[idx] == captureGroup.item) and ((not captureGroup.metato) or (not item_in_box[idx].maxDamage == 0) or (captureGroup.metato == item_in_box[idx].damage))) then
+                                                boxLocation = idx+1
+                                                break
+                                            end
+                                        end
+
+                                        -- replace if can replace, otherwise wait
+                                        if not (boxLocation > 0) and transfer.transferItem(cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i + 1) then
+                                            term.setCursor(1, 4)
+                                            colorWrite(RED, paddingMid("Fuel shortage!"))
+                                            ---@diagnostic disable-next-line: undefined-field
+                                            os.sleep(1)
+                                        end
+                                    end
                                 end
                             end
                         end
                     end
+                    -- check if low damage (no damage or damage lower than the damage in items table).
+                    
+                    -- don't start if there are low damage item
                 end
             end
             -- start if command=r and ready
-            if (command == "r") and (not running) and ready then
+            if (command == "r") and (not running) and ready and (not overheated) then
                 rs.setOutput(cfg["redstone"], 15)
             end
         end
