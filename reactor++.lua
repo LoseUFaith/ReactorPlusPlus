@@ -2,7 +2,7 @@
 --[[
 reactor++.lua By Creepercdn
 Since 2021/8/18 UTC+8:00
-A automatic reactor script for IC2 and OC.
+A automatic reactor script for IC2 with OC.
 ONLY TESTED ON 1.12.2
 ONLY FOR 1.12.2
 
@@ -15,6 +15,7 @@ local event = require("event")
 local filesystem = require("filesystem")
 local serialization = require("serialization")
 local term = require("term")
+local coroutine = require("coroutine")
 -- Don't use tty API. It is obsolete. You should use gpu Component API
 
 local function getCom(t) -- Get component
@@ -66,12 +67,7 @@ local function initColor(type)
     -- Use terminal.sexy! It is awesome!
     -- https://terminal.sexy/
     -- BG FG BLACK RED GREEN YELLOW BLUE PURPLE CYAN WHITE
-    if type == 0 then
-        palette = {
-            0x000000, 0xFFFFFF, 0x000000, 0xFF0000, 0x00FF00, 0xFFFF00,
-            0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFFFF
-        }
-    elseif type == 1 then
+    if type == 1 then
         palette = {
             0x21252B, 0xABB2BF, 0x21252B, 0xE06C75, 0x98C379, 0xE5C07B,
             0x61AFEF, 0xC678DD, 0x56B6C2, 0xABB2BF
@@ -90,6 +86,11 @@ local function initColor(type)
         palette = {
             0x000000, 0xffffff, 0x151515, 0xed4c7a, 0xa6e179, 0xffdf6b,
             0x79d2ff, 0xe85b92, 0x87a8af, 0xe2f1f6
+        }
+    else
+        palette = {
+            0x000000, 0xFFFFFF, 0x000000, 0xFF0000, 0x00FF00, 0xFFFF00,
+            0x0000FF, 0xFF00FF, 0x00FFFF, 0xFFFFFF
         }
     end
     gpu.setBackground(palette[1])
@@ -136,9 +137,9 @@ local function initColor(type)
     end
 end
 
--- fucking lua
+-- f**king lua
 initColor(getTable("/home/reactor.cfg")["theme"] or 0)
--- Q: What the fuck is "or 0"?
+-- Q: What the f**k is "or 0"?
 -- A: Just try it.
 -- > =0 or 0
 -- 0
@@ -202,14 +203,14 @@ local items = {
     ["ic2:hex_heat_storage"] = {{damage = 0.05, item = "ic2:hex_heat_storage"}},
     ["ic2:tri_heat_storage"] = {{damage = 0.1, item = "ic2:tri_heat_storage"}},
     ["ic2:heat_storage"] = {{damage = 0.2, item = "ic2:heat_storage"}},
-    ["ic2:heat_vent"] = {{damage = 0.8}},
-    ["ic2:reactor_heat_vent"] = {{damage = 0.8}},
-    ["ic2:overclocked_heat_vent"] = {{damage = 0.8}},
-    ["ic2:advanced_heat_vemt"] = {{damage = 0.8}},
-    ["ic2:heat_exchanger"] = {{damage = 0.8}},
-    ["ic2:reactor_heat_exchanger"] = {{damage = 0.8}},
-    ["ic2:component_heat_exchanger"] = {{damage = 0.8}},
-    ["ic2:advanced_heat_exchanger"] = {{damage = 0.8}},
+    ["ic2:heat_vent"] = {{damage = 0.5}},
+    ["ic2:reactor_heat_vent"] = {{damage = 0.5}},
+    ["ic2:overclocked_heat_vent"] = {{damage = 0.5}},
+    ["ic2:advanced_heat_vemt"] = {{damage = 0.5}},
+    ["ic2:heat_exchanger"] = {{damage = 0.5}},
+    ["ic2:reactor_heat_exchanger"] = {{damage = 0.5}},
+    ["ic2:component_heat_exchanger"] = {{damage = 0.5}},
+    ["ic2:advanced_heat_exchanger"] = {{damage = 0.5}},
     ["fm:depleted_coaxium_rod"] = {{item = "fm:coaxium_rod"}},
     ["fm:depleted_coaxium_rod_dual"] = {{item = "fm:coaxium_rod_dual"}},
     ["fm:depleted_coaxium_rod_quad"] = {{item = "fm:coaxium_rod_quad"}},
@@ -270,23 +271,23 @@ local function getConfig()
         term.clear()
         cfg = {}
         colorPrint(BLUE, "Please config the sides:")
-        colorPrint(BLUE, "------------------------------------------")
-        colorPrint(BLUE, "0:down 1:top 2:north 3:south 4:west 5:east")
-        colorPrint(BLUE, "------------------------------------------")
+        colorPrint(BLUE, "--------------------------------------------")
+        colorPrint(BLUE, "0:bottom 1:top 2:north 3:south 4:west 5:east")
+        colorPrint(BLUE, "--------------------------------------------")
         -- redstone output side relative to the redstone adapter
-        colorWrite(GREEN, "which side does [REDSTONE] Output? ")
+        colorWrite(GREEN, "Which side does [REDSTONE] Output? ")
         cfg["redstone"] = getKey()
         -- reactor side relative to the transposer
-        colorWrite(GREEN, "which side does REACTOR towards [TRANSPOSER]? ")
+        colorWrite(GREEN, "Which side does REACTOR towards [TRANSPOSER]? ")
         cfg["reactor"] = getKey()
         -- fuel box relative to the transposer
-        colorWrite(GREEN, "which side does FuelBox towards [TRANSPOSER]? ")
+        colorWrite(GREEN, "Which side does FuelBox towards [TRANSPOSER]? ")
         cfg["fuelbox"] = getKey()
         -- waste box relative to the transposer
-        colorWrite(GREEN, "which side does WasteBox towards [TRANSPOSER]? ")
+        colorWrite(GREEN, "Which side does WasteBox towards [TRANSPOSER]? ")
         cfg["wastebox"] = getKey()
         -- overheat ratio
-        colorWrite(GREEN, "what is overheat temperature ratio?(0.0001~1) ")
+        colorWrite(GREEN, "What is overheat temperature ratio? (0.0001~1) ")
         cfg["overheat"] = getKey()
         -- theme
         colorWrite(GREEN,
@@ -317,20 +318,99 @@ local function keyDown(t) -- get key. it t defined, the function will wait the k
     return result
 end
 
+local function checkReactor(running)
+    local cfg = getTable("/home/reactor.cfg")
+    
+    while true do
+        local ready = true
+        local shortage = false
+        local item_in_reactor = transfer.getAllStacks(cfg["reactor"]).getAll()
+        local item_in_box = transfer.getAllStacks(cfg["fuelbox"]).getAll()
+        for i = 0, #item_in_reactor - 4 do -- "-4" is for liquid reactor
+            if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table (only id)
+                for _, captureGroup in ipairs(items [item_in_reactor[i].name]) do -- emurate the capture groups
+                    local lowDamage=true -- if doesn't specify meta and no damage value, just replace it (e.g. depleted rods)
+                    -- if maxDamage isn't zero, there are no metadata.
+                    -- if ((it have damage) or (doesn't specify meta value) or ((there are meta value) and (meta value equals)))
+                    if (item_in_reactor[i].maxDamage ~= 0) or (not captureGroup.metafrom) or (captureGroup.metafrom and (captureGroup.metafrom == item_in_reactor[i].damage)) then
+                        if (not item_in_reactor[i].maxDamage == 0) then -- if it have damage
+                            lowDamage = (
+                                (not captureGroup.damage) -- if doesn't specify damage, just replace it! (the item is need to replace)
+                                or (
+                                    (item_in_reactor[i].maxDamage - item_in_reactor[i].damage)
+                                    <= (captureGroup.damage * item_in_reactor[i].maxDamage)
+                                )
+                            )
+                        end
+                        if lowDamage then
+                            ready = false
+                            if running then
+                                -- stop reactor before replace item
+                                rs.setOutput(cfg["redstone"], 0)
+                                running = false
+                            end
+                            if captureGroup.item then -- can replace
+                                -- find item can be replaced with
+                                local boxLocation = 0
+
+                                -- however, for is best.
+                                --[[ while (boxLocation == 0) and (k <= #item_in_box) do -- if you don't understand why use while, please see reference of boxLocation.
+                                    if item_in_box[k] and (item_in_box[k].name == captureGroup.item) then
+                                        boxLocation = k + 1
+                                        break
+                                    end
+                                    k = k + 1
+                                end ]]
+
+                                for idx=1, #item_in_box, 1 do
+                                    if((item_in_box[idx] == captureGroup.item) and ((not captureGroup.metato) or (not item_in_box[idx].maxDamage == 0) or (captureGroup.metato == item_in_box[idx].damage))) then
+                                        boxLocation = idx+1
+                                        break
+                                    end
+                                    coroutine.yield()
+                                end
+
+                                -- replace if can replace, otherwise wait
+                                if boxLocation<=0 then
+                                    shortage = true
+                                else
+                                    if transfer.transferItem(cfg["reactor"], cfg["wastebox"], 1, i + 1) then
+                                        if not transfer.transferItem(cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i + 1) then
+                                            error("Error when transfer fuel to reactor! Is the reactor slot full, or items in fuel box is not exists?")
+                                        end
+                                    else
+                                        error("Error when transfer depleted items to trash box! Is the trash box full, or the item in reactor is not exists?")
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                -- check if low damage (no damage or damage lower than the damage in items table).
+
+                -- don't start if there are low damage item
+            end
+        end
+        running = coroutine.yield(running, ready, shortage)
+    end
+end
+
 ---------------script starts---------------------
 local w1, h1 = gpu.getResolution() -- origin size
+local reactorThread = coroutine.create(checkReactor)
 if rs and reactor and transfer then -- if components defined
     local cfg = getConfig()
     -- work start
     local w, h = gpu.getResolution()
     local command = "s"
     local overheated = false
+    local shortage = false;
     while true do
         local heat = reactor.getHeat()
         local heatMax = reactor.getMaxHeat()
         local running = reactor.producesEnergy()
 
-        -- fucking lua, too.
+        -- f**king lua, too.
         term.setCursor(1, 1)
         colorWrite(BLUE, paddingLeft("DATE/TIME:    " .. os.date()))
         term.setCursor(1, 2)
@@ -339,10 +419,15 @@ if rs and reactor and transfer then -- if components defined
         term.setCursor(1, 3)
         colorWrite((overheated and RED or GREEN), paddingLeft(
                        string.rep("#", math.floor(w * heat / heatMax)), "."))
-        term.setCursor(1, 4)
-        term.write(paddingLeft(" "))
-        term.setCursor(1, 5)
 
+        term.setCursor(1, 4)
+        if shortage then
+            colorWrite(RED, paddingMid("Fuel shortage!"))
+        else
+            term.write(paddingLeft(" "))
+        end
+
+        term.setCursor(1, 5)
         if running then
             colorWrite(GREEN, paddingMid("<<< RUNNING >>>"))
         else
@@ -358,73 +443,23 @@ if rs and reactor and transfer then -- if components defined
         else
             overheated = false
             -- check the items need to replace or stop
-            -- it is fucking to rebuild shit code
+            -- it is f**king to rebuild shit code
 
-            local item_in_reactor = transfer.getAllStacks(cfg["reactor"]).getAll()
-            local ready = true
-            for i = 0, #item_in_reactor - 4 do -- "-4" is for liquid reactor
-                if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table (only id)
-                    for captureGroup in items[item_in_reactor[i].name] do -- emurate the capture groups
-                        local lowDamage=true -- if doesn't specify meta and no damage value, just replace it (e.g. depleted rods)
-                        -- if maxDamage isn't zero, there are no metadata.
-                        -- if ((it have damage) or (doesn't specify meta value) or ((there are meta value) and (meta value equals)))
-                        if (item_in_reactor[i].maxDamage ~= 0) or (not captureGroup.metafrom) or (captureGroup.metafrom and (captureGroup.metafrom == item_in_reactor[i].damage)) then
-                            if (not item_in_reactor[i].maxDamage == 0) then -- if it have damage
-                                lowDamage = (
-                                    (not captureGroup.damage) -- if doesn't specify damage, just replace it! (the item is need to replace)
-                                    or (
-                                        (item_in_reactor[i].maxDamage - item_in_reactor[i].damage)
-                                        <= (captureGroup.damage * item_in_reactor[i].maxDamage)
-                                    )
-                                )
-                            end
-                            if lowDamage then
-                                ready = false
-                                if running then
-                                    -- stop reactor before replace item
-                                    rs.setOutput(cfg["redstone"], 0)
-                                    running = false
-                                end
-                                if captureGroup.item then -- can replace
-                                    transfer.transferItem(cfg["reactor"], cfg["wastebox"], 1, i + 1) -- don't understand, daren't modify
-                                    -- find item can be replaced with
-                                    local boxLocation = 0
-                                    while boxLocation == 0 do
-                                        local item_in_box = transfer.getAllStacks(cfg["fuelbox"]).getAll()
-
-                                        -- however, for is best.
-                                        --[[ while (boxLocation == 0) and (k <= #item_in_box) do -- if you don't understand why use while, please see reference of boxLocation.
-                                            if item_in_box[k] and (item_in_box[k].name == captureGroup.item) then
-                                                boxLocation = k + 1
-                                                break
-                                            end
-                                            k = k + 1
-                                        end ]]
-
-                                        for idx=1, #item_in_box, 1 do
-                                            if((item_in_box[idx] == captureGroup.item) and ((not captureGroup.metato) or (not item_in_box[idx].maxDamage == 0) or (captureGroup.metato == item_in_box[idx].damage))) then
-                                                boxLocation = idx+1
-                                                break
-                                            end
-                                        end
-
-                                        -- replace if can replace, otherwise wait
-                                        if not (boxLocation > 0) and transfer.transferItem(cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i + 1) then
-                                            term.setCursor(1, 4)
-                                            colorWrite(RED, paddingMid("Fuel shortage!"))
-                                            ---@diagnostic disable-next-line: undefined-field
-                                            os.sleep(1)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                    -- check if low damage (no damage or damage lower than the damage in items table).
-                    
-                    -- don't start if there are low damage item
-                end
+            local ready;
+            local successful, trnig, trdy, tstag = coroutine.resume(reactorThread, running)
+            if not successful then
+                error(trnig)
             end
+            if trnig then
+                running = trnig
+            end
+            if trdy then
+                ready = trdy
+            end
+            if tstag then
+                shortage = tstag
+            end
+
             -- start if command=r and ready
             if (command == "r") and (not running) and ready and (not overheated) then
                 rs.setOutput(cfg["redstone"], 15)
