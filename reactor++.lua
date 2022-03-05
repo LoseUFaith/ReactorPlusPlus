@@ -138,21 +138,10 @@ local function initColor(type)
 end
 
 -- f**king lua
-initColor(getTable("/home/reactor.cfg")["theme"] or 0)
--- Q: What the f**k is "or 0"?
+initColor((getTable("/home/reactor.cfg") or {})["theme"] or 0)
+-- Q: What the f**k is "or 0" and "or {}"?
 -- A: Just try it.
--- > =0 or 0
--- 0
--- > = nil or 0
--- 0
--- > = 255 or 0
--- 255
--- > = {} or 0
--- table: 0xFFFFFFFF
--- > = "i love python" or 0
--- i love python
--- >
--- A: So, "or 0" can convert nil to 0.
+-- A: "or 0" can convert nil to 0, "or {}" can convert nil to {}.
 -- Q: But, why there are no Ternary Operator?
 -- A: I think you should ask Roberto Ierusalimschy, Waldemar Celes and Luiz Henrique de Figueiredo. They are authors of Lua.
 
@@ -226,7 +215,7 @@ local items = {
 
 local rs = getCom("redstone")
 local reactor = getCom("reactor_chamber")
-local transfer = getCom("transposer")
+local transposer = getCom("transposer")
 
 local function paddingMid(s, t) -- print text with padding middle
     local tt = t
@@ -320,12 +309,12 @@ end
 
 local function checkReactor(running)
     local cfg = getTable("/home/reactor.cfg")
-    
+    local actionTable = {}
     while true do
         local ready = true
         local shortage = false
-        local item_in_reactor = transfer.getAllStacks(cfg["reactor"]).getAll()
-        local item_in_box = transfer.getAllStacks(cfg["fuelbox"]).getAll()
+        local item_in_reactor = transposer.getAllStacks(cfg["reactor"]).getAll()
+        local item_in_box = transposer.getAllStacks(cfg["fuelbox"]).getAll()
         for i = 0, #item_in_reactor - 4 do -- "-4" is for liquid reactor
             if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table (only id)
                 for _, captureGroup in ipairs(items [item_in_reactor[i].name]) do -- emurate the capture groups
@@ -374,13 +363,8 @@ local function checkReactor(running)
                                 if boxLocation<=0 then
                                     shortage = true
                                 else
-                                    if transfer.transferItem(cfg["reactor"], cfg["wastebox"], 1, i + 1) then
-                                        if not transfer.transferItem(cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i + 1) then
-                                            error("Error when transfer fuel to reactor! Is the reactor slot full, or items in fuel box is not exists?")
-                                        end
-                                    else
-                                        error("Error when transfer depleted items to trash box! Is the trash box full, or the item in reactor is not exists?")
-                                    end
+                                    table.insert(actionTable, {cfg["reactor"], cfg["wastebox"], 1, i + 1}) -- add transposer event to event table
+                                    table.insert(actionTable, {cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i + 1})
                                 end
                             end
                         end
@@ -391,6 +375,10 @@ local function checkReactor(running)
                 -- don't start if there are low damage item
             end
         end
+        for _, action in ipairs(actionTable) do
+            transposer.transferItem(table.unpack(action)) -- Doing so will improve performance because it only access transposer once
+        end
+        actionTable = {}
         running = coroutine.yield(running, ready, shortage)
     end
 end
@@ -398,7 +386,7 @@ end
 ---------------script starts---------------------
 local w1, h1 = gpu.getResolution() -- origin size
 local reactorThread = coroutine.create(checkReactor)
-if rs and reactor and transfer then -- if components defined
+if rs and reactor and transposer then -- if components defined
     local cfg = getConfig()
     -- work start
     local w, h = gpu.getResolution()
@@ -483,3 +471,5 @@ if rs and reactor and transfer then -- if components defined
 else
     colorPrint(RED, "Please check components: REDSTONE, TRANSPOSER, REACTOR")
 end
+
+gpu.freeAllBuffers()
