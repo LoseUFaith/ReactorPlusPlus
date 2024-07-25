@@ -177,7 +177,7 @@ local items = {
     ["ic2:nuclear"] = {
         {item = "ic2:quad_uranium_fuel_rod", metafrom = 13},
         {item = "ic2:quad_mox_fuel_rod", metafrom = 16},
-        {item = "ic2:dual_urinium_fuel_rod", metafrom = 12},
+        {item = "ic2:dual_uranium_fuel_rod", metafrom = 12},
         {item = "ic2:dual_mox_fuel_rod", metafrom = 15},
         {item = "ic2:uranium_fuel_rod", metafrom = 11},
         {item = "ic2:mox_fuel_rod", metafrom = 14}
