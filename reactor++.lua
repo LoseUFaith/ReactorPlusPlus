@@ -175,12 +175,12 @@ if there are same XX, add multi capture group.
 
 local items = {
     ["ic2:nuclear"] = {
-        {item = "ic2:reactorUraniumQuad", metafrom = 13},
-        {item = "ic2:reactorMOXQuad", metafrom = 16},
-        {item = "ic2:reactorUraniumDual", metafrom = 12},
-        {item = "ic2:reactorMOXDual", metafrom = 15},
-        {item = "ic2:reactorUraniumSimple", metafrom = 11},
-        {item = "ic2:reactorMOXSimple", metafrom = 14}
+        {item = "ic2:quad_uranium_fuel_rod", metafrom = 13},
+        {item = "ic2:quad_mox_fuel_rod", metafrom = 16},
+        {item = "ic2:dual_urinium_fuel_rod", metafrom = 12},
+        {item = "ic2:dual_mox_fuel_rod", metafrom = 15},
+        {item = "ic2:uranium_fuel_rod", metafrom = 11},
+        {item = "ic2:mox_fuel_rod", metafrom = 14}
     },
     ["super_solar_panels:crafting"] = {
         {item = "super_solar_panels:quad_toriy_fuel_rod", metafrom = 55}
@@ -335,7 +335,7 @@ local function checkReactor(running)
                     -- if maxDamage isn't zero, there are no metadata.
                     -- if ((it have damage) or (doesn't specify meta value) or ((there are meta value) and (meta value equals)))
                     if (item_in_reactor[i].maxDamage ~= 0) or (not captureGroup.metafrom) or (captureGroup.metafrom and (captureGroup.metafrom == item_in_reactor[i].damage)) then
-                        if (not item_in_reactor[i].maxDamage == 0) then -- if it have damage
+                        if (item_in_reactor[i].maxDamage ~= 0) then -- if it have damage
                             lowDamage = (
                                 (not captureGroup.damage) -- if doesn't specify damage, just replace it! (the item is need to replace)
                                 or (
@@ -365,7 +365,7 @@ local function checkReactor(running)
                                 end ]]
 
                                 for idx=1, #item_in_box, 1 do
-                                    if((item_in_box[idx] == captureGroup.item) and ((not captureGroup.metato) or (not item_in_box[idx].maxDamage == 0) or (captureGroup.metato == item_in_box[idx].damage))) then
+                                    if((item_in_box[idx].name == captureGroup.item) and ((not captureGroup.metato) or (not item_in_box[idx].maxDamage == 0) or (captureGroup.metato == item_in_box[idx].damage))) then
                                         boxLocation = idx
                                         item_in_box[idx].size = item_in_box[idx].size - 1
                                         if item_in_box[idx].size == 0 then
