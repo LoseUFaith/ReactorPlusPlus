@@ -182,6 +182,9 @@ local items = {
         {item = "ic2:reactorUraniumSimple", metafrom = 11},
         {item = "ic2:reactorMOXSimple", metafrom = 14}
     },
+    ["super_solar_panels:crafting"] = {
+        {item = "super_solar_panels:quad_toriy_fuel_rod", metafrom = 55}
+    },
     ["ic2:reactorReflector"] = {{damage = 0.01, item = "ic2:reactorReflector"}},
     ["ic2:reactorReflectorThick"] = {{
         damage = 0.01,
@@ -206,6 +209,16 @@ local items = {
     ["fm:depleted_cesium_rod"] = {{item = "fm:cesium_rod"}},
     ["fm:depleted_cesium_rod_dual"] = {{item = "fm:cesium_rod_dual"}},
     ["fm:depleted_cesium_rod_quad"] = {{item = "fm:cesium_rod_quad"}}
+}
+
+local emptySlot = {
+    damage = 0,
+    hasTag = false,
+    label = "Air",
+    maxDamage = 0,
+    maxSize = 64,
+    name = "minecraft:air",
+    size = 0
 }
 
 -- Q: When will GregTech update to 1.16?
@@ -353,7 +366,12 @@ local function checkReactor(running)
 
                                 for idx=1, #item_in_box, 1 do
                                     if((item_in_box[idx] == captureGroup.item) and ((not captureGroup.metato) or (not item_in_box[idx].maxDamage == 0) or (captureGroup.metato == item_in_box[idx].damage))) then
-                                        boxLocation = idx+1
+                                        boxLocation = idx
+                                        item_in_box[idx].size = item_in_box[idx].size - 1
+                                        if item_in_box[idx].size == 0 then
+                                            item_in_box[idx] = emptySlot
+                                        end
+
                                         break
                                     end
                                     coroutine.yield()
@@ -363,8 +381,8 @@ local function checkReactor(running)
                                 if boxLocation<=0 then
                                     shortage = true
                                 else
-                                    table.insert(actionTable, {cfg["reactor"], cfg["wastebox"], 1, i + 1}) -- add transposer event to event table
-                                    table.insert(actionTable, {cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i + 1})
+                                    table.insert(actionTable, {cfg["reactor"], cfg["wastebox"], 1, i}) -- add transposer event to event table
+                                    table.insert(actionTable, {cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i})
                                 end
                             end
                         end
