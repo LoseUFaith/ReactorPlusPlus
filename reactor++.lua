@@ -185,10 +185,10 @@ local items = {
     ["super_solar_panels:crafting"] = {
         {item = "super_solar_panels:quad_toriy_fuel_rod", metafrom = 55}
     },
-    ["ic2:reactorReflector"] = {{damage = 0.01, item = "ic2:reactorReflector"}},
-    ["ic2:reactorReflectorThick"] = {{
+    ["ic2:neutron_reflector"] = {{damage = 0.01, item = "ic2:neutron_reflector"}},
+    ["ic2:thick_neutron_reflector"] = {{
         damage = 0.01,
-        item = "ic2:reactorReflectorThick"
+        item = "ic2:thick_neutron_reflector"
     }},
     ["ic2:lzh_condensator"] = {{damage = 0.1, item = "ic2:lzh_condensator"}},
     ["ic2:rsh_condensator"] = {{damage = 0.1, item = "ic2:rsh_condensator"}},
@@ -200,7 +200,7 @@ local items = {
     ["ic2:heat_vent"] = {{damage = 0.5}},
     ["ic2:reactor_heat_vent"] = {{damage = 0.5}},
     ["ic2:overclocked_heat_vent"] = {{damage = 0.5}},
-    ["ic2:advanced_heat_vemt"] = {{damage = 0.5}},
+    ["ic2:advanced_heat_vent"] = {{damage = 0.5}},
     ["ic2:heat_exchanger"] = {{damage = 0.5}},
     ["ic2:reactor_heat_exchanger"] = {{damage = 0.5}},
     ["ic2:component_heat_exchanger"] = {{damage = 0.5}},
