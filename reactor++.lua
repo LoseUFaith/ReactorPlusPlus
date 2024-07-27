@@ -325,7 +325,7 @@ local function keyDown(t) -- get key. it t defined, the function will wait the k
     return result
 end
 
-local function checkReactor(running)
+local function checkReactor(output)
     local cfg = getTable("/home/reactor.cfg")
     local actionTable = {}
     while true do
@@ -351,11 +351,11 @@ local function checkReactor(running)
                         end
                         if lowDamage then
                             ready = false
-                            if running then
+                            if output then
                                 -- stop reactor before replace item
                                 rs.setOutput(cfg["redstone1"], 0)
                                 rs.setOutput(cfg["redstone2"], 0)
-                                running = false
+                                output = false
                             end
                             if captureGroup.item then -- can replace
                                 -- find item can be replaced with
@@ -380,7 +380,7 @@ local function checkReactor(running)
 
                                         break
                                     end
-                                    coroutine.yield()
+                                    -- coroutine.yield(output, ready, shortage)
                                 end
 
                                 -- replace if can replace, otherwise wait
@@ -403,7 +403,7 @@ local function checkReactor(running)
             transposer.transferItem(table.unpack(action)) -- Doing so will improve performance because it only access transposer once
         end
         actionTable = {}
-        running = coroutine.yield(running, ready, shortage)
+        output = coroutine.yield(output, ready, shortage)
     end
 end
 
@@ -461,27 +461,20 @@ if rs and reactor and transposer then -- if components defined
             -- it is f**king to rebuild shit code
 
             local ready;
-            local successful, trnig, trdy, tstag = coroutine.resume(reactorThread, running)
+            local successful, topt, trdy, tstag = coroutine.resume(reactorThread, running)
             if not successful then
-                error(trnig)
-            else
-                running = trnig
+                error(topt)
+            end
+            
+            if trdy then
                 ready = trdy
+            end
+            if tstag ~= nil then
                 shortage = tstag
             end
 
-            -- if trnig then
-            --     running = trnig
-            -- end
-            -- if trdy then
-            --     ready = trdy
-            -- end
-            -- if tstag then
-            --     shortage = tstag
-            -- end
-
             -- start if command=r and ready
-            if (command == "r") and (not running) and ready and (not overheated) then
+            if (command == "r") and (not topt) and ready and (not overheated) then
                 rs.setOutput(cfg["redstone1"], 15)
                 rs.setOutput(cfg["redstone2"], 15)
             end
