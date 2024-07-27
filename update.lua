@@ -1,5 +1,6 @@
 -- Purpose: Update the reactor++ script.
-fs=filesystem
+fs=require("filesystem")
+os=require("os")
 
 pwd=os.getenv("PWD")
 -- backup the current script
