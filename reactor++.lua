@@ -464,16 +464,21 @@ if rs and reactor and transposer then -- if components defined
             local successful, trnig, trdy, tstag = coroutine.resume(reactorThread, running)
             if not successful then
                 error(trnig)
-            end
-            if trnig then
+            else
                 running = trnig
-            end
-            if trdy then
                 ready = trdy
-            end
-            if tstag then
                 shortage = tstag
             end
+
+            -- if trnig then
+            --     running = trnig
+            -- end
+            -- if trdy then
+            --     ready = trdy
+            -- end
+            -- if tstag then
+            --     shortage = tstag
+            -- end
 
             -- start if command=r and ready
             if (command == "r") and (not running) and ready and (not overheated) then
