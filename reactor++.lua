@@ -279,8 +279,11 @@ local function getConfig()
         colorPrint(BLUE, "0:bottom 1:top 2:north 3:south 4:west 5:east")
         colorPrint(BLUE, "--------------------------------------------")
         -- redstone output side relative to the redstone adapter
-        colorWrite(GREEN, "Which side does [REDSTONE] Output? ")
-        cfg["redstone"] = getKey()
+        colorWrite(GREEN, "Which side does [REDSTONE1] Output? ")
+        cfg["redstone1"] = getKey()
+        -- redstone output side relative to the redstone adapter
+        colorWrite(GREEN, "Which side does [REDSTONE2] Output? ")
+        cfg["redstone2"] = getKey()
         -- reactor side relative to the transposer
         colorWrite(GREEN, "Which side does REACTOR towards [TRANSPOSER]? ")
         cfg["reactor"] = getKey()
@@ -350,7 +353,8 @@ local function checkReactor(running)
                             ready = false
                             if running then
                                 -- stop reactor before replace item
-                                rs.setOutput(cfg["redstone"], 0)
+                                rs.setOutput(cfg["redstone1"], 0)
+                                rs.setOutput(cfg["redstone2"], 0)
                                 running = false
                             end
                             if captureGroup.item then -- can replace
@@ -445,7 +449,10 @@ if rs and reactor and transposer then -- if components defined
         colorWrite(YELLOW, "[Run] [Stop] [eXit] [Config] " .. command)
 
         if heat / heatMax > cfg["overheat"] then -- stop if overheat
-            if running then rs.setOutput(cfg["redstone"], 0) end
+            if running then
+                rs.setOutput(cfg["redstone1"], 0)
+                rs.setOutput(cfg["redstone2"], 0)
+            end
             running = false
             overheated = true
         else
@@ -470,20 +477,24 @@ if rs and reactor and transposer then -- if components defined
 
             -- start if command=r and ready
             if (command == "r") and (not running) and ready and (not overheated) then
-                rs.setOutput(cfg["redstone"], 15)
+                rs.setOutput(cfg["redstone1"], 15)
+                rs.setOutput(cfg["redstone2"], 15)
             end
         end
         local key = keyDown(0.2) -- capture key
         if key == 115 then -- press s key means stop
             command = "s";
-            rs.setOutput(cfg["redstone"], 0);
+            rs.setOutput(cfg["redstone1"], 0);
+            rs.setOutput(cfg["redstone2"], 0);
         elseif key == 114 then -- press r means run
             command = "r"
         elseif key == 120 then -- press x means exit
-            rs.setOutput(cfg["redstone"], 0);
+            rs.setOutput(cfg["redstone1"], 0);
+            rs.setOutput(cfg["redstone2"], 0);
             break
         elseif key == 99 then -- press c, stop reactor before config, means config
-            rs.setOutput(cfg["redstone"], 0)
+            rs.setOutput(cfg["redstone1"], 0)
+            rs.setOutput(cfg["redstone2"], 0)
             cfg = getConfig()
         end
     end
