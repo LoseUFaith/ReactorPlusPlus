@@ -308,7 +308,7 @@ local function getConfig()
 
     ---@diagnostic disable-next-line: undefined-field
     os.sleep(1);
-    gpu.setResolution(32,6)
+    gpu.setResolution(32,7)
     term.clear()
 
     return cfg
@@ -333,6 +333,7 @@ local function checkReactor(output)
         local shortage = false
         local item_in_reactor = transposer.getAllStacks(cfg["reactor"]).getAll()
         local item_in_box = transposer.getAllStacks(cfg["fuelbox"]).getAll()
+        local missing_items = []
         for i = 0, #item_in_reactor - 4 do -- "-4" is for liquid reactor
             if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table (only id)
                 for _, captureGroup in ipairs(items [item_in_reactor[i].name]) do -- emurate the capture groups
@@ -386,6 +387,7 @@ local function checkReactor(output)
                                 -- replace if can replace, otherwise wait
                                 if boxLocation<=0 then
                                     shortage = true
+                                    missing_items.insert(captureGroup.item)
                                 else
                                     table.insert(actionTable, {cfg["reactor"], cfg["wastebox"], 1, i}) -- add transposer event to event table
                                     table.insert(actionTable, {cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i})
@@ -394,16 +396,18 @@ local function checkReactor(output)
                         end
                     end
                 end
-                -- check if low damage (no damage or damage lower than the damage in items table).
-
-                -- don't start if there are low damage item
             end
         end
-        for _, action in ipairs(actionTable) do
-            transposer.transferItem(table.unpack(action)) -- Doing so will improve performance because it only access transposer once
+
+        if shortage then
+            coroutine.yield(output, ready, shortage, missing_items)
+        else
+            for _, action in ipairs(actionTable) do
+                transposer.transferItem(table.unpack(action)) -- Doing so will improve performance because it only access transposer once
+            end
+            actionTable = {}
+            output = coroutine.yield(output, ready, shortage)
         end
-        actionTable = {}
-        output = coroutine.yield(output, ready, shortage)
     end
 end
 
@@ -417,6 +421,7 @@ if rs and reactor and transposer then -- if components defined
     local command = "s"
     local overheated = false
     local shortage = false;
+    local missing_items = []
     while true do
         local heat = reactor.getHeat()
         local heatMax = reactor.getMaxHeat()
@@ -440,12 +445,20 @@ if rs and reactor and transposer then -- if components defined
         end
 
         term.setCursor(1, 5)
+        if #missing_items ~=0 then
+            local item = missing_items[1]
+            colorWrite(RED, paddingMid("Missing items: " .. item))
+        else
+            term.write(paddingLeft(" "))
+        end
+
+        term.setCursor(1, 6)
         if running then
             colorWrite(GREEN, paddingMid("<<< RUNNING >>>"))
         else
             colorWrite(RED, paddingMid("<<< STOP >>>"))
         end
-        term.setCursor(1, 6)
+        term.setCursor(1, 7)
         colorWrite(YELLOW, "[Run] [Stop] [eXit] [Config] " .. command)
 
         if heat / heatMax > cfg["overheat"] then -- stop if overheat
@@ -460,21 +473,34 @@ if rs and reactor and transposer then -- if components defined
             -- check the items need to replace or stop
             -- it is f**king to rebuild shit code
 
-            local ready;
-            local successful, topt, trdy, tstag = coroutine.resume(reactorThread, running)
+            local ready, output;
+            local successful, topt, trdy, tstag, tmsi = coroutine.resume(reactorThread, running)
             if not successful then
+                -- broken detect thread
+                -- emergency stop
+
+                rs.setOutput(cfg["redstone1"], 0)
+                rs.setOutput(cfg["redstone2"], 0)
+
                 error(topt)
+            else
+                output = topt
+                ready = trdy
+
+                shortage = tstag
+                missing_items = tmsi
             end
             
-            if trdy then
-                ready = trdy
-            end
-            if tstag ~= nil then
-                shortage = tstag
-            end
+            -- if trdy then
+            --     ready = trdy
+            -- end
+            -- if tstag ~= nil then
+            --     shortage = tstag
+            -- end
+
 
             -- start if command=r and ready
-            if (command == "r") and (not topt) and ready and (not overheated) then
+            if (command == "r") and (not output) and ready and (not overheated) then
                 rs.setOutput(cfg["redstone1"], 15)
                 rs.setOutput(cfg["redstone2"], 15)
             end
