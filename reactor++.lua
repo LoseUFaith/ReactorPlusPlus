@@ -10,6 +10,34 @@ A version from reactor2.lua(By odixus, https://www.mcmod.cn/post/693.html)
 
 Some themes can found on https://xcolors.herokuapp.com/
 --]]
+
+-- get args
+local args = {...}
+local rcfg = {}
+
+for i = 1, #args, 1 do
+    local key
+
+    if args[i]:find('^(-)-') then
+        key = args[i]:sub(3)
+    else 
+        if args[i]:find('^(-)') then
+            key = args[i]:sub(2)
+        end
+    end
+
+    if key then
+        -- has next and not an option
+        if #args >= i+1 and args[i+1]:find('^(-)') == nil then
+            rcfg[key] = args[i+1]
+            i = i+1
+        else
+            rcfg[key] = true
+        end
+    end
+end
+
+
 local component = require("component")
 local event = require("event")
 local filesystem = require("filesystem")
@@ -259,7 +287,11 @@ end
 local function getConfig()
     -- Config sides. If there are config file and using the config, read the config and prompt, otherwise reconfigure.
     local cfg = getTable("/home/reactor.cfg")
-    gpu.setResolution(50,16)
+
+    if not rcfg["debug"] then
+        gpu.setResolution(50,16)
+    end
+
     term.clear()
     if cfg then
         colorPrint(BLUE, "Current configuration:")
@@ -308,7 +340,9 @@ local function getConfig()
 
     ---@diagnostic disable-next-line: undefined-field
     os.sleep(1);
-    gpu.setResolution(32,7)
+    if not rcfg["debug"] then
+        gpu.setResolution(42,8)
+    end
     term.clear()
 
     return cfg
@@ -333,7 +367,7 @@ local function checkReactor(output)
         local shortage = false
         local item_in_reactor = transposer.getAllStacks(cfg["reactor"]).getAll()
         local item_in_box = transposer.getAllStacks(cfg["fuelbox"]).getAll()
-        local missing_items = []
+        local missing_items = {}
         for i = 0, #item_in_reactor - 4 do -- "-4" is for liquid reactor
             if item_in_reactor[i] and items[item_in_reactor[i].name] then -- check if this slot has item and this item is recorded in items table (only id)
                 for _, captureGroup in ipairs(items [item_in_reactor[i].name]) do -- emurate the capture groups
@@ -387,7 +421,7 @@ local function checkReactor(output)
                                 -- replace if can replace, otherwise wait
                                 if boxLocation<=0 then
                                     shortage = true
-                                    missing_items.insert(captureGroup.item)
+                                    table.insert(missing_items, captureGroup.item)
                                 else
                                     table.insert(actionTable, {cfg["reactor"], cfg["wastebox"], 1, i}) -- add transposer event to event table
                                     table.insert(actionTable, {cfg["fuelbox"], cfg["reactor"], 1, boxLocation, i})
@@ -400,13 +434,14 @@ local function checkReactor(output)
         end
 
         if shortage then
+            actionTable = {}
             coroutine.yield(output, ready, shortage, missing_items)
         else
             for _, action in ipairs(actionTable) do
                 transposer.transferItem(table.unpack(action)) -- Doing so will improve performance because it only access transposer once
             end
             actionTable = {}
-            output = coroutine.yield(output, ready, shortage)
+            output = coroutine.yield(output, ready, shortage, missing_items)
         end
     end
 end
@@ -421,7 +456,7 @@ if rs and reactor and transposer then -- if components defined
     local command = "s"
     local overheated = false
     local shortage = false;
-    local missing_items = []
+    local missing_items = {}
     while true do
         local heat = reactor.getHeat()
         local heatMax = reactor.getMaxHeat()
@@ -452,14 +487,14 @@ if rs and reactor and transposer then -- if components defined
             term.write(paddingLeft(" "))
         end
 
-        term.setCursor(1, 6)
+        term.setCursor(1, 7)
         if running then
             colorWrite(GREEN, paddingMid("<<< RUNNING >>>"))
         else
             colorWrite(RED, paddingMid("<<< STOP >>>"))
         end
-        term.setCursor(1, 7)
-        colorWrite(YELLOW, "[Run] [Stop] [eXit] [Config] " .. command)
+        term.setCursor(1, 8)
+        colorWrite(YELLOW, "[Run] [Stop] [eXit] [Config] | Current: " .. command)
 
         if heat / heatMax > cfg["overheat"] then -- stop if overheat
             if running then
@@ -491,14 +526,6 @@ if rs and reactor and transposer then -- if components defined
                 missing_items = tmsi
             end
             
-            -- if trdy then
-            --     ready = trdy
-            -- end
-            -- if tstag ~= nil then
-            --     shortage = tstag
-            -- end
-
-
             -- start if command=r and ready
             if (command == "r") and (not output) and ready and (not overheated) then
                 rs.setOutput(cfg["redstone1"], 15)
