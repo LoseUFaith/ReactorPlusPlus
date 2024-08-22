@@ -377,6 +377,7 @@ local function emergencyStop() -- emergency stop
         if cmpRetry > 10 then
             print("Can't find redstone component!")
             return false, "Cannot find redstone component!"
+        end
         emgrs = getCom("redstone")
     end
 
