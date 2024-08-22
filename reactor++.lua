@@ -508,6 +508,7 @@ if rs and reactor and transposer then -- if components defined
             if rcRetry > 10 then
                 print("Can't find reactor component!")
                 emergencyStop()
+                os.exit()
             end
             reactor = getCom("reactor")
             suc, result = pcall(getReactorInfo, reactor)
