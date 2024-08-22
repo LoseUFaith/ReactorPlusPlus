@@ -359,6 +359,40 @@ local function keyDown(t) -- get key. it t defined, the function will wait the k
     return result
 end
 
+local function stopCycle(emgrs)
+    emgrs.setOutput(0, 0)
+    emgrs.setOutput(1, 0)
+    emgrs.setOutput(2, 0)
+    emgrs.setOutput(3, 0)
+    emgrs.setOutput(4, 0)
+    emgrs.setOutput(5, 0)
+end
+
+local function emergencyStop() -- emergency stop
+    local emgrs = getCom("redstone")
+    local cmpRetry = 0
+
+    while not emgrs do
+        cmpRetry = cmpRetry + 1
+        if cmpRetry > 10 then
+            print("Can't find redstone component!")
+            return false, "Cannot find redstone component!"
+        emgrs = getCom("redstone")
+    end
+
+    local stopRetry = 0
+    local status, err = pcall(stopCycle, emgrs)
+    while not statue do
+        stopRetry = stopRetry + 1
+        if stopRetry > 10 then
+            print("Can't stop reactor!")
+            return false, "Cannot stop reactor!"
+        end
+        status, err = pcall(stopCycle, emgrs)
+    end
+    return true
+end
+
 local function checkReactor(output)
     local cfg = getTable("/home/reactor.cfg")
     local actionTable = {}
@@ -446,6 +480,14 @@ local function checkReactor(output)
     end
 end
 
+local function getReactorInfo(reactor)
+    return {
+        heat = reactor.getHeat(),
+        heatMax = reactor.getMaxHeat(),
+        running = reactor.producesEnergy()
+    }
+end
+
 ---------------script starts---------------------
 local w1, h1 = gpu.getResolution() -- origin size
 local reactorThread = coroutine.create(checkReactor)
@@ -458,9 +500,22 @@ if rs and reactor and transposer then -- if components defined
     local shortage = false;
     local missing_items = {}
     while true do
-        local heat = reactor.getHeat()
-        local heatMax = reactor.getMaxHeat()
-        local running = reactor.producesEnergy()
+        local suc, result = pcall(getReactorInfo, reactor)
+        local rcRetry = 0
+        while not suc do
+            rcRetry = rcRetry + 1
+            if rcRetry > 10 then
+                print("Can't find reactor component!")
+                emergencyStop()
+            end
+            reactor = getCom("reactor")
+            suc, result = pcall(getReactorInfo, reactor)
+        end
+
+        local heat = result.heat
+        local heatMax = result.heatMax
+        local running = result.running
+        
 
         -- f**king lua, too.
         term.setCursor(1, 1)
