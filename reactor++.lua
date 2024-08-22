@@ -382,8 +382,8 @@ local function emergencyStop() -- emergency stop
     end
 
     local stopRetry = 0
-    local status, err = pcall(stopCycle, emgrs)
-    while not statue do
+    local status = pcall(stopCycle, emgrs)
+    while not status do
         stopRetry = stopRetry + 1
         if stopRetry > 10 then
             print("Can't stop reactor!")
